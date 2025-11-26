@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Head from "next/head";
 import Header from "../components/Header";
 import FilterSidebar from "../components/FilterSidebar";
@@ -6,38 +6,37 @@ import ProductGrid from "../components/ProductGrid";
 import Footer from "../components/Footer";
 import styles from "../styles/Home.module.css";
 
-export async function getServerSideProps() {
-  try {
-    const res = await fetch("https://fakestoreapi.com/products?limit=24");
-    if (!res.ok) {
-      throw new Error(`Failed to fetch: ${res.status}`);
-    }
-    const data = await res.json();
-    const products = data.map(p => ({
-      id: p.id,
-      title: p.title,
-      price: p.price,
-      description: p.description,
-      image: p.image,
-      alt: p.title.replace(/\s+/g, "-").toLowerCase()
-    }));
-    return { props: { products, error: null } };
-  } catch (error) {
-    console.error("SSR error:", error);
-    // Return empty products and set error message as prop
-    return { props: { products: [], error: error.message } };
-  }
-}
-
-export default function Home({ products, error }) {
+export default function Home() {
+  const [products, setProducts] = useState([]);
+  const [error, setError] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
+
+  useEffect(() => {
+    fetch("https://fakestoreapi.com/products?limit=24")
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        const productList = data.map((p) => ({
+          id: p.id,
+          title: p.title,
+          price: p.price,
+          description: p.description,
+          image: p.image,
+          alt: p.title.replace(/\s+/g, "-").toLowerCase(),
+        }));
+        setProducts(productList);
+      })
+      .catch((err) => setError(err.message));
+  }, []);
 
   const schema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     "name": "Discover Our Products",
     "description": "A curated listing of products — bags, toys and accessories.",
-    "hasPart": products.slice(0, 5).map(p => ({
+    "hasPart": products.slice(0, 5).map((p) => ({
       "@type": "Product",
       "name": p.title,
       "image": p.image,
@@ -46,24 +45,32 @@ export default function Home({ products, error }) {
       "offers": {
         "@type": "Offer",
         "price": String(p.price),
-        "priceCurrency": "USD"
-      }
-    }))
+        "priceCurrency": "USD",
+      },
+    })),
   };
 
   return (
     <>
       <Head>
         <title>Discover Our Products | Appscrip Task</title>
-        <meta name="description" content="Discover our curated collection of bags, toys and accessories. Filter & sort to find products." />
+        <meta
+          name="description"
+          content="Discover our curated collection of bags, toys and accessories. Filter & sort to find products."
+        />
         <meta name="robots" content="index,follow" />
         <link rel="canonical" href="https://your-deploy-url.com/" />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
       </Head>
       <Header />
       <main className={styles.container}>
         <h1 className={styles.pageTitle}>DISCOVER OUR PRODUCTS</h1>
-        <p className={styles.lead}>Browse high quality, hand-picked products. Use filters to refine results.</p>
+        <p className={styles.lead}>
+          Browse high quality, hand-picked products. Use filters to refine results.
+        </p>
         {error && (
           <div style={{ color: "red", marginBottom: "1rem" }}>
             Unable to load products: {error}
@@ -99,7 +106,6 @@ export default function Home({ products, error }) {
           </section>
         </div>
       </main>
-      {/* === Place footer at the bottom of your page === */}
       <Footer />
     </>
   );
