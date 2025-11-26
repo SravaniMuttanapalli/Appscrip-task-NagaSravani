@@ -7,20 +7,29 @@ import Footer from "../components/Footer";
 import styles from "../styles/Home.module.css";
 
 export async function getServerSideProps() {
-  const res = await fetch("https://fakestoreapi.com/products?limit=24");
-  const data = await res.json();
-  const products = data.map(p => ({
-    id: p.id,
-    title: p.title,
-    price: p.price,
-    description: p.description,
-    image: p.image,
-    alt: p.title.replace(/\s+/g, "-").toLowerCase()
-  }));
-  return { props: { products } };
+  try {
+    const res = await fetch("https://fakestoreapi.com/products?limit=24");
+    if (!res.ok) {
+      throw new Error(`Failed to fetch: ${res.status}`);
+    }
+    const data = await res.json();
+    const products = data.map(p => ({
+      id: p.id,
+      title: p.title,
+      price: p.price,
+      description: p.description,
+      image: p.image,
+      alt: p.title.replace(/\s+/g, "-").toLowerCase()
+    }));
+    return { props: { products, error: null } };
+  } catch (error) {
+    console.error("SSR error:", error);
+    // Return empty products and set error message as prop
+    return { props: { products: [], error: error.message } };
+  }
 }
 
-export default function Home({ products }) {
+export default function Home({ products, error }) {
   const [showSidebar, setShowSidebar] = useState(true);
 
   const schema = {
@@ -55,6 +64,11 @@ export default function Home({ products }) {
       <main className={styles.container}>
         <h1 className={styles.pageTitle}>DISCOVER OUR PRODUCTS</h1>
         <p className={styles.lead}>Browse high quality, hand-picked products. Use filters to refine results.</p>
+        {error && (
+          <div style={{ color: "red", marginBottom: "1rem" }}>
+            Unable to load products: {error}
+          </div>
+        )}
         <div className={styles.content}>
           {showSidebar ? (
             <aside className={styles.sidebar}>
